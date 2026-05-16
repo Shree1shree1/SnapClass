@@ -13,6 +13,10 @@ from src.components.dialog_enroll import enroll_dialog
 from src.components.subject_card import subject_card
 
 def student_dashboard():
+
+    if st.session_state.get("show_enroll_after_register"):
+        del st.session_state["show_enroll_after_register"]
+        enroll_dialog()
     student_data =st.session_state.student_data
     student_id =student_data["student_id"]
     c1,c2 =st.columns(2,vertical_alignment="center",gap ="xxlarge")
@@ -82,6 +86,11 @@ def student_screen():
     style_background_dashboard()
     style_base_layout()
 
+
+    if "classifier_trained" not in st.session_state:
+        train_classifier()
+        st.session_state["classifier_trained"] = True
+
     if "show_registration" not in st.session_state:
         st.session_state["show_registration"] = False
 
@@ -122,7 +131,7 @@ def student_screen():
             else:
                 st.success("Face Detected")
                 if detected and len(detected) > 0:
-                    student_id =list(detected.keys())[0]
+                    student_id = int(list(detected.keys())[0])
                     all_students = get_all_students()
                     student = next(( s for s in all_students if s["student_id"] == student_id),None)
 
@@ -171,10 +180,12 @@ def student_screen():
                             response_data = create_student(new_name,face_embedding =face_emb,voice_embedding =voice_emb)
 
                             if response_data:
-                                train_classifier()
+                                with st.spinner("Training face recognition model..."):
+                                    train_classifier()
                                 st.session_state.is_logged_in = True
                                 st.session_state.user_role = "student"
                                 st.session_state.student_data = response_data[0]
+                                st.session_state["show_enroll_after_register"] = True
                                 st.toast(f'Profile Created! Hi {new_name}')
                                 time.sleep(1)
                                 st.rerun()
